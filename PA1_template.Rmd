@@ -1,25 +1,99 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
 output: 
-  html_document:
-    keep_md: true
+html_document:
+keep_md: true
 ---
-
+This markdown doucment needs to need the following libraries. if you don't have the packages on your sytem, please install "ggplot2" and "dplyr" first.
+```{r results='hide', message=FALSE, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+```
 
 ## Loading and preprocessing the data
+Show any code that is needed to
 
-
-
+1.Load the data (i.e.  read.csv() )
+```{r}
+data <- read.csv("activity.csv")
+```
+2.Process/transform the data (if necessary) into a format suitable for your analysis
+```{r results='hide', message=FALSE, warning=FALSE}
+data1 <- data[!is.na(data$steps), ]
+```
 ## What is mean total number of steps taken per day?
+For this part of the assignment, you can ignore the missing values in the dataset.
+1.Make a histogram of the total number of steps taken each day
+```{r}
+daily_steps <- (group_by(data1, date) %>% summarise(n=sum(steps)))$n
+hist(daily_steps)
+```  
 
-
-
+2.Calculate and report the mean and median total number of steps taken per day
+```{r}
+mean(daily_steps)
+median(daily_steps)
+```  
 ## What is the average daily activity pattern?
 
 
+1.Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+```{r}
+steps <- group_by(data1, interval) %>% summarise(average_steps=sum(steps))
+plot(steps, type='l')
+```
+
+2.Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+```{r}
+arrange(steps, desc(average_steps))[1,"interval"]
+```
 
 ## Imputing missing values
+Note that there are a number of days/intervals where there are missing values (coded as NA). The presence of missing days may introduce bias into some calculations or summaries of the data.
 
+1.Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+```{r}
+colSums(is.na(data))
+sum(is.na(data))
+```
+
+2.Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+3.Create a new dataset that is equal to the original dataset but with the missing data filled in.
+```{r}
+merged <- merge(data, steps, by.x="interval", by.y="interval")
+merged$steps[is.na(merged$steps)] <- merged$average_steps[is.na(merged$steps)]
+```
+
+4.Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+```{r}
+daily_steps <- (group_by(data1, date) %>% summarise(n=sum(steps)))$n
+merged_daily_steps <- (group_by(merged, date) %>% summarise(n=sum(steps)))$n
+par(mfrow=c(2,1))
+hist(daily_steps)
+hist(merged_daily_steps)
+
+mean(daily_steps)
+median(daily_steps)
+mean(merged_daily_steps)
+median(merged_daily_steps)
+
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+For this part the weekdays() function may be of some help here. Use the dataset with the filled-in missing values for this part.
+
+1.Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+```{r}
+data1$week <- as.factor(ifelse(weekdays(as.Date(data1$date, "%Y-%m-%d")) %in% c("Saturday","Sunday"), "weekend", "weekday"))
+week_steps <- group_by(data1, week, interval) %>% summarise(average_steps=sum(steps))
+```
+
+2.Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). The plot should look something like the following, which was creating using simulated data:
+
+```{r}
+ggplot(week_steps, aes(x=interval, y=average_steps)) + geom_line() + facet_grid(week~.)
+```
